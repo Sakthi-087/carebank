@@ -10,44 +10,40 @@ export default function Home() {
   const [error, setError] = useState('')
 
   useEffect(() => {
-    async function loadAnalysis() {
+    async function load() {
       try {
-        const payload = await fetchAnalysis()
-        setAnalysis(payload)
+        const data = await fetchAnalysis()
+        setAnalysis(data)
       } catch (err) {
-        setError('Unable to load financial analysis. Start the backend API and refresh the page.')
+        setError('Unable to load dashboard data. Start the backend and refresh the page.')
       } finally {
         setLoading(false)
       }
     }
 
-    loadAnalysis()
+    load()
   }, [])
 
   return (
-    <main className="min-h-screen px-4 py-6 text-slate-100 sm:px-6 lg:px-8">
-      <div className="mx-auto grid max-w-7xl gap-6 xl:grid-cols-[300px_1fr]">
+    <main className="min-h-screen bg-slate-100 px-4 py-6 text-slate-900 sm:px-6 lg:px-8">
+      <div className="mx-auto grid max-w-7xl gap-6 xl:grid-cols-[260px_1fr]">
         <Sidebar />
 
         <section className="space-y-6">
-          <header className="rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur-xl">
-            <p className="text-sm uppercase tracking-[0.3em] text-emerald-300">AI-Powered Financial Wellness</p>
-            <div className="mt-3 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-              <div>
-                <h2 className="text-3xl font-semibold text-white">Smart monitoring for healthier money habits</h2>
-                <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-300">
-                  Multi-agent analytics categorize transactions, score financial health, trigger alerts, and explain next steps with generative AI.
-                </p>
-              </div>
-            </div>
+          <header className="rounded-xl border border-slate-200 bg-gradient-to-r from-blue-600 to-blue-500 p-6 text-white shadow-md">
+            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-blue-100">CareBank Dashboard</p>
+            <h1 className="mt-3 text-3xl font-bold">AI-Powered Financial Wellness System</h1>
+            <p className="mt-3 max-w-3xl text-sm leading-6 text-blue-50">
+              Analyze spending behavior, surface intelligent alerts, and chat with an AI assistant grounded in your financial data.
+            </p>
           </header>
 
           {loading ? (
-            <div className="rounded-3xl border border-white/10 bg-white/5 p-10 text-center text-slate-300 backdrop-blur-xl">
-              Loading your financial wellness dashboard...
+            <div className="rounded-xl border border-slate-200 bg-white p-10 text-center text-slate-500 shadow-md">
+              Loading CareBank insights...
             </div>
           ) : error ? (
-            <div className="rounded-3xl border border-rose-400/20 bg-rose-500/10 p-10 text-center text-rose-100 backdrop-blur-xl">
+            <div className="rounded-xl border border-rose-200 bg-rose-50 p-10 text-center text-rose-700 shadow-md">
               {error}
             </div>
           ) : (

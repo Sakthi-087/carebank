@@ -1,38 +1,30 @@
 from __future__ import annotations
 
-from app.models.schemas import FinancialHealth, RecommendationItem, SpendingSummary
+from app.models.schemas import FinancialHealth, SpendingSummary
 
 
 class AdvisoryAgent:
-    def analyze(self, spending: SpendingSummary, health: FinancialHealth) -> list[RecommendationItem]:
-        recommendations: list[RecommendationItem] = []
+    def analyze(self, spending: SpendingSummary, alerts: list[str], health: FinancialHealth) -> list[str]:
+        recommendations: list[str] = []
 
-        top_flexible = [item for item in spending.categories if item.category in {"Shopping", "Dining", "Entertainment"}]
-        if top_flexible:
-            top_item = top_flexible[0]
-            recommendations.append(
-                RecommendationItem(
-                    title=f"Trim {top_item.category.lower()} spending",
-                    action=f"Reduce {top_item.category.lower()} spend by 10-15% next month using a simple weekly cap.",
-                    impact="Creates quick savings without affecting essential bills.",
-                )
-            )
+        if spending.Shopping >= 2000:
+            recommendations.append("Reduce shopping budget by ₹2000 and batch non-essential purchases weekly")
+        else:
+            recommendations.append("Keep shopping spend on a weekly cap to avoid impulse-led month-end creep")
 
-        if health.savings_rate < 20:
-            recommendations.append(
-                RecommendationItem(
-                    title="Increase savings buffer",
-                    action="Auto-transfer part of income into savings right after payday.",
-                    impact="Improves resilience for emergencies and large bills.",
-                )
-            )
+        if spending.Food >= 3500:
+            recommendations.append("Set food budget cap at ₹3000/month and track dining separately from groceries")
+        else:
+            recommendations.append("Maintain a fixed meal and grocery limit to keep food expenses predictable")
 
-        recommendations.append(
-            RecommendationItem(
-                title="Review subscriptions and recurring costs",
-                action="Check recurring services and cancel any low-value subscriptions.",
-                impact="Reduces passive monthly leakage from your budget.",
-            )
-        )
+        if health.savings_rate < 85:
+            recommendations.append("Increase savings allocation by 10% right after salary credit")
+        else:
+            recommendations.append("Continue directing surplus cash into savings before discretionary spending")
+
+        if spending.total < 20000:
+            recommendations.append("Consider a fixed deposit or recurring deposit for surplus funds this month")
+        else:
+            recommendations.append("Move any remaining surplus into a low-risk savings instrument for better discipline")
 
         return recommendations

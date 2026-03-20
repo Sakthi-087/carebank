@@ -1,97 +1,79 @@
-import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts'
-import { MetricCard, Panel, ScoreCard } from './Cards'
+import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts'
+import { KpiCard, SectionCard } from './Cards'
 
-const chartColors = ['#22c55e', '#38bdf8', '#a78bfa', '#f97316', '#facc15', '#fb7185', '#94a3b8']
+const colors = ['#2563eb', '#22c55e', '#f59e0b', '#ef4444']
+const alertStyles = ['border-amber-200 bg-amber-50 text-amber-800', 'border-yellow-200 bg-yellow-50 text-yellow-800', 'border-rose-200 bg-rose-50 text-rose-800']
 
 export default function Dashboard({ analysis }) {
-  const { spending, financial_health: health, alerts, recommendations, ai_explanation: explanation } = analysis
-
   return (
     <div className="space-y-6">
-      <div className="grid gap-6 xl:grid-cols-[1.4fr_1fr]">
-        <ScoreCard health={health} />
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-1">
-          <MetricCard
-            label="Total spent"
-            value={`$${spending.total_spent.toFixed(2)}`}
-            caption={`Top category: ${spending.top_category}`}
-          />
-          <MetricCard
-            label="Average transaction"
-            value={`$${spending.average_transaction.toFixed(2)}`}
-            caption={`${spending.categories.length} tracked categories`}
-          />
-        </div>
+      <div className="grid gap-6 xl:grid-cols-4 md:grid-cols-2">
+        {analysis.kpis.map((item) => (
+          <KpiCard key={item.title} item={item} />
+        ))}
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
-        <Panel title="Spending Breakdown" subtitle="Category distribution for this month">
+      <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
+        <SectionCard title="Spending Breakdown" subtitle="Current month category distribution">
           <div className="grid gap-6 lg:grid-cols-[1fr_0.9fr]">
             <div className="h-80">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
-                  <Pie data={spending.categories} dataKey="total" nameKey="category" innerRadius={80} outerRadius={115} paddingAngle={4}>
-                    {spending.categories.map((entry, index) => (
-                      <Cell key={entry.category} fill={chartColors[index % chartColors.length]} />
+                  <Pie data={analysis.chart_data} dataKey="value" nameKey="name" innerRadius={65} outerRadius={110} paddingAngle={4} isAnimationActive>
+                    {analysis.chart_data.map((entry, index) => (
+                      <Cell key={entry.name} fill={colors[index % colors.length]} />
                     ))}
                   </Pie>
-                  <Tooltip formatter={(value) => `$${Number(value).toFixed(2)}`} />
+                  <Tooltip formatter={(value) => `₹${Number(value).toLocaleString('en-IN')}`} />
+                  <Legend />
                 </PieChart>
               </ResponsiveContainer>
             </div>
+
             <div className="space-y-3">
-              {spending.categories.map((item, index) => (
-                <div key={item.category} className="rounded-2xl bg-slate-950/50 p-4">
-                  <div className="flex items-center justify-between gap-3">
+              {analysis.chart_data.map((item, index) => (
+                <div key={item.name} className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                  <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <span className="h-3 w-3 rounded-full" style={{ backgroundColor: chartColors[index % chartColors.length] }} />
-                      <p className="font-medium text-white">{item.category}</p>
+                      <span className="h-3 w-3 rounded-full" style={{ backgroundColor: colors[index % colors.length] }} />
+                      <p className="font-semibold text-slate-900">{item.name}</p>
                     </div>
-                    <p className="text-sm text-slate-300">{item.percentage}%</p>
+                    <p className="text-sm font-medium text-slate-600">{item.change >= 0 ? '+' : ''}{item.change}%</p>
                   </div>
-                  <p className="mt-2 text-sm text-slate-400">
-                    ${item.total.toFixed(2)} across {item.transaction_count} transactions
-                  </p>
+                  <p className="mt-2 text-sm text-slate-500">₹{item.value.toLocaleString('en-IN')} this month</p>
                 </div>
               ))}
             </div>
           </div>
-        </Panel>
+        </SectionCard>
 
-        <Panel title="AI Explanation" subtitle="Generative summary based on agent outputs">
-          <div className="rounded-2xl bg-slate-950/50 p-5 text-sm leading-7 text-slate-200">{explanation}</div>
-        </Panel>
-      </div>
-
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Panel title="Alerts" subtitle="Warnings identified by the alert agent">
+        <SectionCard title="Alerts Panel" subtitle="Real-time signals from the alert agent">
           <div className="space-y-4">
-            {alerts.map((alert) => (
-              <div key={alert.title} className="rounded-2xl border border-amber-400/20 bg-amber-500/10 p-4">
+            {analysis.alerts.map((alert, index) => (
+              <div key={alert} className={`rounded-xl border p-4 ${alertStyles[index % alertStyles.length]}`}>
                 <div className="flex items-center justify-between gap-3">
-                  <p className="font-medium text-white">{alert.title}</p>
-                  <span className="rounded-full bg-white/10 px-3 py-1 text-xs uppercase tracking-[0.2em] text-amber-200">
-                    {alert.severity}
-                  </span>
+                  <p className="font-semibold">⚠ {alert}</p>
+                  <span className="text-xs font-semibold uppercase tracking-wide">Now</span>
                 </div>
-                <p className="mt-3 text-sm leading-6 text-slate-200">{alert.message}</p>
               </div>
             ))}
           </div>
-        </Panel>
-
-        <Panel title="Recommendations" subtitle="Actions generated by the advisory agent">
-          <div className="space-y-4">
-            {recommendations.map((recommendation) => (
-              <div key={recommendation.title} className="rounded-2xl border border-emerald-400/20 bg-emerald-500/10 p-4">
-                <p className="font-medium text-white">{recommendation.title}</p>
-                <p className="mt-3 text-sm leading-6 text-slate-200">{recommendation.action}</p>
-                <p className="mt-2 text-xs uppercase tracking-[0.2em] text-emerald-200">{recommendation.impact}</p>
-              </div>
-            ))}
-          </div>
-        </Panel>
+        </SectionCard>
       </div>
+
+      <SectionCard title="Recommendations (AI)" subtitle="Personalized actions generated by the advisory agent">
+        <div className="grid gap-4 lg:grid-cols-2">
+          {analysis.recommendations.map((recommendation) => (
+            <div key={recommendation} className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-900">
+              <p className="font-semibold">✔ {recommendation}</p>
+            </div>
+          ))}
+        </div>
+      </SectionCard>
+
+      <SectionCard title="AI Explanation" subtitle="Generative summary built from structured agent output">
+        <div className="rounded-xl bg-slate-50 p-5 text-sm leading-7 text-slate-700">{analysis.ai_explanation}</div>
+      </SectionCard>
     </div>
   )
 }

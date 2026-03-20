@@ -12,47 +12,40 @@ class Transaction(BaseModel):
     category: str
 
 
-class CategoryBreakdown(BaseModel):
-    category: str
-    total: float
-    percentage: float
-    transaction_count: int
-
-
-class SpendingSummary(BaseModel):
-    total_spent: float
-    average_transaction: float
-    top_category: str
-    categories: list[CategoryBreakdown]
-    monthly_totals: dict[str, float]
-
-
 class FinancialHealth(BaseModel):
     score: int = Field(ge=0, le=100)
     status: str
+    risk_indicator: str
     summary: str
     savings_rate: float
-    essential_spend_ratio: float
 
 
-class AlertItem(BaseModel):
+class SpendingSummary(BaseModel):
+    Food: float
+    Shopping: float
+    Travel: float
+    Bills: float
+    total: float
+    change_vs_last_month: float
+    largest_category: str
+
+
+class KPIItem(BaseModel):
     title: str
-    severity: str
-    message: str
-
-
-class RecommendationItem(BaseModel):
-    title: str
-    action: str
-    impact: str
+    value: str
+    subtitle: str
+    tone: str
 
 
 class AnalysisResponse(BaseModel):
-    spending: SpendingSummary
     financial_health: FinancialHealth
-    alerts: list[AlertItem]
-    recommendations: list[RecommendationItem]
+    spending: SpendingSummary
+    alerts: list[str]
+    recommendations: list[str]
     ai_explanation: str
+    kpis: list[KPIItem]
+    chart_data: list[dict[str, Any]]
+    insights: dict[str, Any]
 
 
 class ChatRequest(BaseModel):

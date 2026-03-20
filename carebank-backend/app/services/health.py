@@ -4,40 +4,43 @@ from app.models.schemas import FinancialHealth, SpendingSummary, Transaction
 
 
 class FinancialHealthAgent:
-    ESSENTIAL_CATEGORIES = {"Housing", "Groceries", "Utilities", "Insurance", "Healthcare", "Transport"}
-
     def analyze(self, transactions: list[Transaction], spending: SpendingSummary) -> FinancialHealth:
-        income = abs(sum(transaction.amount for transaction in transactions if transaction.amount < 0))
-        essential_spend = sum(
-            category.total for category in spending.categories if category.category in self.ESSENTIAL_CATEGORIES
+        months = sorted({transaction.date[:7] for transaction in transactions if transaction.amount > 0})
+        current_month = months[-1]
+
+        income = abs(
+            sum(transaction.amount for transaction in transactions if transaction.amount < 0 and transaction.date.startswith(current_month))
         )
-        discretionary_spend = spending.total_spent - essential_spend
-        savings = max(income - spending.total_spent, 0)
+        total_spend = spending.total
+        savings = max(income - total_spend, 0)
+        savings_rate = (savings / income * 100) if income else 0.0
+        shopping_pressure = (spending.Shopping / total_spend * 100) if total_spend else 0.0
+        travel_pressure = (spending.Travel / total_spend * 100) if total_spend else 0.0
 
-        savings_rate = (savings / income) if income else 0
-        essential_spend_ratio = (essential_spend / spending.total_spent) if spending.total_spent else 0
-        discretionary_ratio = (discretionary_spend / income) if income else 1
-
-        score = 55
-        score += int(min(savings_rate * 100, 25))
-        score += 10 if essential_spend_ratio >= 0.45 else 0
-        score -= int(min(discretionary_ratio * 40, 25))
+        score = 92
+        score -= int(min(max(spending.change_vs_last_month, 0), 20))
+        score -= 8 if shopping_pressure > 25 else 0
+        score -= 5 if travel_pressure > 18 else 0
+        score += 4 if savings_rate >= 80 else 0
         score = max(0, min(100, score))
 
-        if score >= 75:
+        if score >= 80:
             status = "Good"
-            summary = "Your cash flow is healthy, with room to save and controlled discretionary spending."
-        elif score >= 50:
+            risk_indicator = "Low"
+            summary = "Your income is stable and your spending remains manageable, but discretionary categories need monitoring."
+        elif score >= 60:
             status = "Moderate"
-            summary = "Your finances are stable, but a few spending habits should be tightened."
+            risk_indicator = "Medium"
+            summary = "Your finances are stable overall, though increased discretionary spending is starting to reduce efficiency."
         else:
             status = "Risk"
-            summary = "Your spending pattern needs attention to avoid budget pressure."
+            risk_indicator = "High"
+            summary = "Your current spending trend is putting noticeable pressure on savings and deserves attention."
 
         return FinancialHealth(
             score=score,
             status=status,
+            risk_indicator=risk_indicator,
             summary=summary,
-            savings_rate=round(savings_rate * 100, 2),
-            essential_spend_ratio=round(essential_spend_ratio * 100, 2),
+            savings_rate=round(savings_rate, 2),
         )

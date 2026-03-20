@@ -2,43 +2,65 @@ from __future__ import annotations
 
 from collections import defaultdict
 
-from app.models.schemas import CategoryBreakdown, SpendingSummary, Transaction
+from app.models.schemas import SpendingSummary, Transaction
 
 
 class SpendingAnalysisAgent:
-    ESSENTIAL_CATEGORIES = {"Housing", "Groceries", "Utilities", "Insurance", "Healthcare", "Transport"}
+    TRACKED_CATEGORIES = ["Food", "Shopping", "Travel", "Bills"]
 
-    def analyze(self, transactions: list[Transaction]) -> SpendingSummary:
+    def analyze(self, transactions: list[Transaction]) -> dict[str, object]:
         expense_transactions = [transaction for transaction in transactions if transaction.amount > 0]
-        total_spent = sum(transaction.amount for transaction in expense_transactions)
-        average_transaction = total_spent / len(expense_transactions) if expense_transactions else 0.0
+        months = sorted({transaction.date[:7] for transaction in expense_transactions})
+        current_month = months[-1]
+        previous_month = months[-2] if len(months) > 1 else months[-1]
 
-        category_totals: dict[str, float] = defaultdict(float)
-        category_counts: dict[str, int] = defaultdict(int)
-        monthly_totals: dict[str, float] = defaultdict(float)
+        current_totals = self._totals_for_month(expense_transactions, current_month)
+        previous_totals = self._totals_for_month(expense_transactions, previous_month)
 
-        for transaction in expense_transactions:
-            category_totals[transaction.category] += transaction.amount
-            category_counts[transaction.category] += 1
-            month_key = transaction.date[:7]
-            monthly_totals[month_key] += transaction.amount
+        current_total = sum(current_totals.values())
+        previous_total = sum(previous_totals.values())
+        change_vs_last_month = ((current_total - previous_total) / previous_total * 100) if previous_total else 0.0
+        largest_category = max(current_totals, key=current_totals.get) if current_totals else "Food"
 
-        breakdown = [
-            CategoryBreakdown(
-                category=category,
-                total=round(total, 2),
-                percentage=round((total / total_spent) * 100, 2) if total_spent else 0.0,
-                transaction_count=category_counts[category],
-            )
-            for category, total in sorted(category_totals.items(), key=lambda item: item[1], reverse=True)
+        summary = SpendingSummary(
+            Food=round(current_totals.get("Food", 0.0), 2),
+            Shopping=round(current_totals.get("Shopping", 0.0), 2),
+            Travel=round(current_totals.get("Travel", 0.0), 2),
+            Bills=round(current_totals.get("Bills", 0.0), 2),
+            total=round(current_total, 2),
+            change_vs_last_month=round(change_vs_last_month, 2),
+            largest_category=largest_category,
+        )
+
+        chart_data = [
+            {
+                "name": category,
+                "value": round(current_totals.get(category, 0.0), 2),
+                "previous": round(previous_totals.get(category, 0.0), 2),
+                "change": round(self._percentage_change(current_totals.get(category, 0.0), previous_totals.get(category, 0.0)), 2),
+            }
+            for category in self.TRACKED_CATEGORIES
         ]
 
-        top_category = breakdown[0].category if breakdown else "N/A"
+        return {
+            "summary": summary,
+            "chart_data": chart_data,
+            "current_month": current_month,
+            "previous_month": previous_month,
+            "current_totals": current_totals,
+            "previous_totals": previous_totals,
+            "current_total": current_total,
+            "previous_total": previous_total,
+        }
 
-        return SpendingSummary(
-            total_spent=round(total_spent, 2),
-            average_transaction=round(average_transaction, 2),
-            top_category=top_category,
-            categories=breakdown,
-            monthly_totals={month: round(total, 2) for month, total in monthly_totals.items()},
-        )
+    def _totals_for_month(self, transactions: list[Transaction], month: str) -> dict[str, float]:
+        totals: dict[str, float] = defaultdict(float)
+        for transaction in transactions:
+            if transaction.date.startswith(month) and transaction.category in self.TRACKED_CATEGORIES:
+                totals[transaction.category] += transaction.amount
+        return {category: round(totals.get(category, 0.0), 2) for category in self.TRACKED_CATEGORIES}
+
+    def _percentage_change(self, current: float, previous: float) -> float:
+        if previous == 0:
+            return 100.0 if current > 0 else 0.0
+        return ((current - previous) / previous) * 100

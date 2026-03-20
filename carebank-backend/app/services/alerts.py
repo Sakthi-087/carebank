@@ -1,60 +1,30 @@
 from __future__ import annotations
 
-from app.models.schemas import AlertItem, FinancialHealth, SpendingSummary
+from app.models.schemas import FinancialHealth
 
 
 class AlertAgent:
-    def analyze(self, spending: SpendingSummary, health: FinancialHealth) -> list[AlertItem]:
-        alerts: list[AlertItem] = []
-        categories = {item.category: item for item in spending.categories}
+    def analyze(self, spending_context: dict[str, object], health: FinancialHealth) -> list[str]:
+        alerts: list[str] = []
+        current = spending_context["current_totals"]
+        previous = spending_context["previous_totals"]
 
-        shopping = categories.get("Shopping")
-        dining = categories.get("Dining")
-        housing = categories.get("Housing")
+        shopping_change = self._percentage_change(current["Shopping"], previous["Shopping"])
+        food_change = self._percentage_change(current["Food"], previous["Food"])
+        travel_change = self._percentage_change(current["Travel"], previous["Travel"])
 
-        if shopping and shopping.percentage > 18:
-            alerts.append(
-                AlertItem(
-                    title="Shopping spend is elevated",
-                    severity="medium",
-                    message="Shopping is taking a notable share of your budget this month. Consider postponing non-urgent purchases.",
-                )
-            )
+        if shopping_change > 20:
+            alerts.append(f"Shopping spending increased by {round(shopping_change)}% versus last month")
+        if current["Food"] >= 4000 or food_change > 15:
+            alerts.append("Food category is nearing your recommended monthly budget limit")
+        if travel_change > 25 or current["Travel"] >= 1000:
+            alerts.append("Travel expenses are unusually high this week compared to your normal pattern")
+        if health.risk_indicator == "High":
+            alerts.append("Overall financial risk is elevated due to rising discretionary spend")
 
-        if dining and dining.total > spending.average_transaction * 3:
-            alerts.append(
-                AlertItem(
-                    title="Dining costs are trending up",
-                    severity="low",
-                    message="Dining expenses are higher than your normal ticket size and may be worth capping weekly.",
-                )
-            )
+        return alerts or ["No critical alerts detected in the current cycle"]
 
-        if housing and housing.percentage > 40:
-            alerts.append(
-                AlertItem(
-                    title="Housing dominates your spend",
-                    severity="medium",
-                    message="Fixed housing costs consume a large part of total spending, leaving less room for flexible savings.",
-                )
-            )
-
-        if health.status == "Risk":
-            alerts.append(
-                AlertItem(
-                    title="Financial health requires action",
-                    severity="high",
-                    message="Your financial health score suggests your current spending pace may become difficult to sustain.",
-                )
-            )
-
-        if not alerts:
-            alerts.append(
-                AlertItem(
-                    title="No major alerts",
-                    severity="info",
-                    message="Your current spending pattern does not show critical warning signals.",
-                )
-            )
-
-        return alerts
+    def _percentage_change(self, current: float, previous: float) -> float:
+        if previous == 0:
+            return 100.0 if current > 0 else 0.0
+        return ((current - previous) / previous) * 100

@@ -15,27 +15,23 @@ class LLMService:
         self.provider = os.getenv("LLM_PROVIDER", "openrouter")
 
     async def generate_explanation(self, payload: dict[str, Any]) -> str:
-        prompt = self._build_explanation_prompt(payload)
+        prompt = (
+            "Convert this financial analysis into a clean, human explanation in 3-4 sentences. "
+            "Mention score, strengths, biggest concern, and practical next step.\n\n"
+            f"Analysis:\n{json.dumps(payload, indent=2)}"
+        )
         response = await self._chat_completion(prompt)
-        if response:
-            return response
-        return self._fallback_explanation(payload)
+        return response or self._fallback_explanation(payload)
 
     async def answer_question(self, question: str, payload: dict[str, Any]) -> str:
         prompt = (
-            "You are CareBank, an AI financial wellness assistant. Answer the user's question using the provided financial analysis. "
-            "Stay specific, practical, and concise.\n\n"
-            f"Financial analysis:\n{json.dumps(payload, indent=2)}\n\n"
+            "You are CareBank, a financial wellness assistant. Answer using the analysis below. "
+            "Explain numeric drivers and stay concise.\n\n"
+            f"Analysis:\n{json.dumps(payload, indent=2)}\n\n"
             f"User question: {question}"
         )
         response = await self._chat_completion(prompt)
-        if response:
-            return response
-        return (
-            "Based on your latest transactions, your largest spending pressure comes from "
-            f"{payload['spending']['top_category'].lower()}, while alerts highlight areas to watch. "
-            "Try lowering flexible spending and reviewing recurring expenses."
-        )
+        return response or self._fallback_chat(question, payload)
 
     async def _chat_completion(self, prompt: str) -> str | None:
         if not self.api_key:
@@ -52,36 +48,40 @@ class LLMService:
         body = {
             "model": self.model,
             "messages": [
-                {"role": "system", "content": "You are a helpful financial wellness assistant."},
+                {"role": "system", "content": "You are a precise financial wellness assistant."},
                 {"role": "user", "content": prompt},
             ],
-            "temperature": 0.4,
+            "temperature": 0.3,
         }
 
-        url = f"{self.base_url.rstrip('/')}/chat/completions"
         try:
             async with httpx.AsyncClient(timeout=20.0) as client:
-                response = await client.post(url, headers=headers, json=body)
+                response = await client.post(f"{self.base_url.rstrip('/')}/chat/completions", headers=headers, json=body)
                 response.raise_for_status()
                 payload = response.json()
                 return payload["choices"][0]["message"]["content"].strip()
         except Exception:
             return None
 
-    def _build_explanation_prompt(self, payload: dict[str, Any]) -> str:
-        return (
-            "Explain the user's financial behavior in friendly, professional language. Include strengths, risks, and next steps.\n\n"
-            f"Structured analysis:\n{json.dumps(payload, indent=2)}"
-        )
-
     def _fallback_explanation(self, payload: dict[str, Any]) -> str:
         health = payload["financial_health"]
         spending = payload["spending"]
-        alerts = payload["alerts"]
-        recommendations = payload["recommendations"]
+        top_alert = payload["alerts"][0] if payload["alerts"] else "No major alerts were detected"
         return (
-            f"Your financial health score is {health['score']} ({health['status']}). "
-            f"This month you spent ${spending['total_spent']:.2f}, with {spending['top_category']} as the top category. "
-            f"Key watch-outs include {alerts[0]['title'].lower()}. "
-            f"A smart next step is to {recommendations[0]['action'].lower()}"
+            f"Your financial health is {health['status'].upper()} (Score: {health['score']}). "
+            f"This month your total spending was ₹{spending['total']:.0f}, with {spending['largest_category'].lower()} driving the highest outflow. "
+            f"The biggest signal right now is that {top_alert.lower()}. "
+            "Maintaining discipline in discretionary categories can improve your savings rate further."
+        )
+
+    def _fallback_chat(self, question: str, payload: dict[str, Any]) -> str:
+        spending = payload["spending"]
+        if "why" in question.lower() and "spend" in question.lower():
+            return (
+                f"You spent more this month because total expenses rose by {spending['change_vs_last_month']:.1f}% versus last month. "
+                f"The main driver was {spending['largest_category'].lower()}, especially shopping at ₹{spending['Shopping']:.0f} and food at ₹{spending['Food']:.0f}."
+            )
+        return (
+            f"Your current financial health score is {payload['financial_health']['score']}. "
+            f"Focus first on shopping and food controls, since they are driving most of the month-over-month increase."
         )
