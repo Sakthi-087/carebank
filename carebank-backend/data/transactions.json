@@ -1,0 +1,18 @@
+[
+  {"date": "2026-03-01", "description": "Rent Payment", "amount": 1450.00, "category": "Housing"},
+  {"date": "2026-03-02", "description": "City Grocers", "amount": 124.38, "category": "Groceries"},
+  {"date": "2026-03-03", "description": "Coffee House", "amount": 18.50, "category": "Dining"},
+  {"date": "2026-03-04", "description": "Metro Fuel", "amount": 62.10, "category": "Transport"},
+  {"date": "2026-03-05", "description": "Streaming Subscription", "amount": 15.99, "category": "Entertainment"},
+  {"date": "2026-03-06", "description": "Pharmacy", "amount": 42.76, "category": "Healthcare"},
+  {"date": "2026-03-08", "description": "Online Shopping", "amount": 210.45, "category": "Shopping"},
+  {"date": "2026-03-10", "description": "Utility Bill", "amount": 176.82, "category": "Utilities"},
+  {"date": "2026-03-12", "description": "Weekend Dining", "amount": 86.25, "category": "Dining"},
+  {"date": "2026-03-13", "description": "Salary Deposit", "amount": -4200.00, "category": "Income"},
+  {"date": "2026-03-15", "description": "Fitness Membership", "amount": 49.99, "category": "Wellness"},
+  {"date": "2026-03-16", "description": "Supermarket", "amount": 143.17, "category": "Groceries"},
+  {"date": "2026-03-17", "description": "Ride Share", "amount": 29.30, "category": "Transport"},
+  {"date": "2026-03-18", "description": "Electronics Store", "amount": 379.99, "category": "Shopping"},
+  {"date": "2026-03-19", "description": "Insurance", "amount": 220.00, "category": "Insurance"},
+  {"date": "2026-03-20", "description": "Lunch Meeting", "amount": 33.80, "category": "Dining"}
+]
