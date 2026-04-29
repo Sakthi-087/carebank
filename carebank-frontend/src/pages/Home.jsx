@@ -6,6 +6,7 @@ import Analytics from './Analytics'
 import AIAssistant from './AIAssistant'
 import Settings from './Settings'
 import {
+  createManualTransaction,
   fetchAnalysis,
   fetchFinancialScore,
   fetchFraudCheck,
@@ -55,6 +56,7 @@ export default function Home() {
   const [authNotice, setAuthNotice] = useState('')
   const [route, setRoute] = useState(getRouteFromHash())
   const [uploading, setUploading] = useState(false)
+  const [manualSaving, setManualSaving] = useState(false)
   const [uploadState, setUploadState] = useState(null)
   const [preferences, setPreferences] = useState({
     overspending_alerts: true,
@@ -176,15 +178,15 @@ export default function Home() {
     if (route === 'settings') {
       return (
         <Settings
-          session={session}
           uploading={uploading}
+          manualSaving={manualSaving}
           uploadState={uploadState}
           fraudCheck={fraudCheck}
           onUpload={handleUpload}
+          onManualCreate={handleManualCreate}
           preferences={preferences}
           preferencesSaving={preferencesSaving}
           onTogglePreference={handleTogglePreference}
-          health={health}
         />
       )
     }
@@ -274,6 +276,33 @@ export default function Home() {
       })
     } finally {
       setUploading(false)
+    }
+  }
+
+  async function handleManualCreate(payload) {
+    if (!session?.access_token) return
+
+    setManualSaving(true)
+    setUploadState(null)
+
+    try {
+      const result = await createManualTransaction(payload, session.access_token)
+      setUploadState({
+        tone: 'success',
+        message: 'Manual transaction saved successfully.',
+        errors: [],
+        fraudSummary: result.fraud_summary || [],
+      })
+      await loadWorkspace(session.access_token)
+    } catch (nextError) {
+      setUploadState({
+        tone: 'error',
+        message: nextError.message || 'Unable to save the transaction.',
+        errors: [],
+        fraudSummary: [],
+      })
+    } finally {
+      setManualSaving(false)
     }
   }
 

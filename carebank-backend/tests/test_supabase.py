@@ -5,9 +5,9 @@ import unittest
 import httpx
 
 from app.core.config import Settings
+from app.models.schemas import ManualTransactionRequest, Transaction, UserContext
 from app.services.supabase import SupabaseService
 from app.services.transaction_utils import normalize_transaction
-from app.models.schemas import Transaction
 
 
 class SupabaseServiceTests(unittest.TestCase):
@@ -25,3 +25,22 @@ class SupabaseServiceTests(unittest.TestCase):
         normalized = normalize_transaction(transaction)
 
         self.assertEqual(normalized.amount, -80000)
+
+    def test_build_manual_transaction_row_normalizes_values(self) -> None:
+        settings = Settings()
+        service = SupabaseService(settings)
+        payload = ManualTransactionRequest(
+            date="2026-04-09",
+            description="  Coffee shop  ",
+            amount=245.5,
+            category="Food",
+        )
+        user = UserContext(id="user-123", email="demo@example.com")
+
+        row = service.build_manual_transaction_row(payload, user)
+
+        self.assertEqual(row["user_id"], "user-123")
+        self.assertEqual(row["amount"], 245.5)
+        self.assertEqual(row["category"], "Food")
+        self.assertEqual(row["description"], "Coffee shop")
+        self.assertTrue(str(row["created_at"]).startswith("2026-04-09"))

@@ -11,7 +11,7 @@ import httpx
 from fastapi import HTTPException, status
 
 from app.core.config import Settings
-from app.models.schemas import Transaction, UserContext
+from app.models.schemas import ManualTransactionRequest, Transaction, UserContext
 from app.services.transaction_utils import normalize_transaction
 
 logger = logging.getLogger(__name__)
@@ -125,19 +125,39 @@ class SupabaseService:
                 amount = self._parse_amount(self._pick_required(record, ["amount", "value", "amt", "debit", "credit"]))
                 description = self._pick_optional(record, ["description", "details", "narration", "merchant"]) or "Imported transaction"
                 category = self._pick_optional(record, ["category", "type"]) or self._infer_category(description)
-                rows.append(
-                    {
-                        "user_id": user.id,
-                        "amount": amount,
-                        "category": category,
-                        "description": description,
-                        "created_at": created_at,
-                    }
-                )
+                rows.append(self.build_transaction_row(user=user, created_at=created_at, amount=amount, description=description, category=category))
             except ValueError as exc:
                 errors.append(f"Row {index}: {exc}")
 
         return rows, errors
+
+    def build_manual_transaction_row(self, payload: ManualTransactionRequest, user: UserContext) -> dict[str, object]:
+        return self.build_transaction_row(
+            user=user,
+            created_at=self._parse_date(payload.date),
+            amount=payload.amount,
+            description=payload.description,
+            category=payload.category,
+        )
+
+    def build_transaction_row(
+        self,
+        *,
+        user: UserContext,
+        created_at: str,
+        amount: float,
+        description: str,
+        category: str,
+    ) -> dict[str, object]:
+        normalized_description = description.strip() or "Imported transaction"
+        normalized_category = category.strip() or self._infer_category(normalized_description)
+        return {
+            "user_id": user.id,
+            "amount": abs(float(amount)),
+            "category": normalized_category,
+            "description": normalized_description,
+            "created_at": created_at,
+        }
 
     def _headers(self, access_token: str) -> dict[str, str]:
         return {

@@ -1,6 +1,6 @@
 # CareBank - AI-Powered Financial Wellness System
 
-CareBank is a full-stack financial wellness demo with Supabase-backed auth and data storage, a FastAPI backend, and a React dashboard for analysis, AI chat, and CSV transaction ingestion.
+CareBank is a full-stack financial wellness demo with Supabase-backed auth and data storage, a FastAPI backend, and a React dashboard for analysis, AI chat, CSV transaction ingestion, and manual transaction entry.
 
 ## Stack
 
@@ -17,7 +17,7 @@ CareBank is a full-stack financial wellness demo with Supabase-backed auth and d
 - Deterministic simulation engine for projected balance and spend-safety decisions
 - AI explanation layer on top of simulation output using only structured projection fields
 - Lightweight anomaly detection to flag suspicious transactions based on user behavior
-- User-scoped transaction reads and CSV imports into the `transactions` table
+- User-scoped transaction reads, manual transaction entry, and CSV imports into the `transactions` table
 - Dashboard, analytics, recommendations, and AI assistant backed by each user's own data
 
 ## Backend setup
@@ -140,6 +140,12 @@ The upload endpoint accepts authenticated `multipart/form-data` CSV uploads and 
 - Description: `description`, `details`, `narration`, or `merchant`
 - Category: `category` or `type` (optional, inferred when missing)
 
+## Manual transaction entry
+
+- The Settings page also supports adding one transaction at a time without a CSV file
+- Manual transactions are validated, fraud-checked, and inserted into the same `transactions` table as CSV imports
+- Required fields: `date`, `description`, `amount`, and `category`
+
 ## Protected API routes
 
 - `GET /analyze`
@@ -147,4 +153,5 @@ The upload endpoint accepts authenticated `multipart/form-data` CSV uploads and 
 - `GET /financial-score`
 - `POST /chat`
 - `POST /simulate`
+- `POST /transactions/manual`
 - `POST /transactions/upload-csv`

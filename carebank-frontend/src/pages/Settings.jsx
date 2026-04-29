@@ -21,17 +21,23 @@ function ToggleRow({ title, description, enabled, onToggle, disabled }) {
 }
 
 export default function Settings({
-  session,
   uploading,
+  manualSaving,
   uploadState,
   fraudCheck,
   onUpload,
+  onManualCreate,
   preferences,
   preferencesSaving,
   onTogglePreference,
-  health,
 }) {
   const [file, setFile] = useState(null)
+  const [manualForm, setManualForm] = useState({
+    date: new Date().toISOString().slice(0, 10),
+    description: '',
+    amount: '',
+    category: 'Food',
+  })
 
   function handleSubmit(event) {
     event.preventDefault()
@@ -39,19 +45,35 @@ export default function Settings({
     onUpload(file)
   }
 
+  function handleManualChange(event) {
+    const { name, value } = event.target
+    setManualForm((current) => ({
+      ...current,
+      [name]: value,
+    }))
+  }
+
+  async function handleManualSubmit(event) {
+    event.preventDefault()
+    const trimmedDescription = manualForm.description.trim()
+    if (!trimmedDescription || !manualForm.amount || !manualForm.date || !manualForm.category) return
+
+    await onManualCreate({
+      ...manualForm,
+      description: trimmedDescription,
+      amount: Number(manualForm.amount),
+    })
+
+    setManualForm((current) => ({
+      ...current,
+      description: '',
+      amount: '',
+    }))
+  }
+
   return (
     <div className="space-y-6">
-      <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
-        <SectionCard title="Session & Environment" subtitle="Operational context for the current user session">
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 text-sm leading-7 text-slate-700">
-            <p><span className="font-semibold text-slate-900">User:</span> {session?.user?.email || 'Unknown'}</p>
-            <p><span className="font-semibold text-slate-900">Backend auth:</span> Protected routes verify your Supabase bearer token before accessing transaction data.</p>
-            <p><span className="font-semibold text-slate-900">Frontend env:</span> <code>VITE_SUPABASE_URL</code>, <code>VITE_SUPABASE_ANON_KEY</code>, <code>VITE_API_URL</code></p>
-            <p><span className="font-semibold text-slate-900">Health:</span> {health ? (health.sample_data_fallback_enabled ? 'Sample fallback enabled.' : 'Live-only mode.') : 'Unavailable.'}</p>
-            <p><span className="font-semibold text-slate-900">LLM:</span> {health?.llm_configured ? 'Configured' : 'Fallback-only mode'}</p>
-          </div>
-        </SectionCard>
-
+      <div className="grid gap-6 xl:grid-cols-1">
         <SectionCard title="Safety Snapshot" subtitle="Recent anomaly detections available for demo and review">
           {fraudCheck?.flagged_transactions?.length ? (
             <div className="space-y-3">
@@ -74,22 +96,94 @@ export default function Settings({
         </SectionCard>
       </div>
 
-      <SectionCard title="CSV Ingestion" subtitle="Upload a bank or wallet export directly into the CareBank pipeline">
-        <form onSubmit={handleSubmit} className="grid gap-4 lg:grid-cols-[1fr_auto] lg:items-end">
-          <input
-            type="file"
-            accept=".csv,text/csv"
-            onChange={(event) => setFile(event.target.files?.[0] || null)}
-            className="block w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-700"
-          />
-          <button
-            type="submit"
-            disabled={!file || uploading}
-            className="rounded-2xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-60"
-          >
-            {uploading ? 'Uploading...' : 'Upload CSV'}
-          </button>
-        </form>
+      <SectionCard title="Transaction Ingestion" subtitle="Upload a statement or add a single transaction manually into the CareBank pipeline">
+        <div className="grid gap-6 xl:grid-cols-2">
+          <form onSubmit={handleSubmit} className="space-y-4 rounded-3xl border border-slate-200 bg-slate-50 p-5">
+            <div>
+              <p className="font-semibold text-slate-900">CSV import</p>
+              <p className="mt-1 text-sm text-slate-500">Upload a bank or wallet export when you want to sync many rows at once.</p>
+            </div>
+            <input
+              type="file"
+              accept=".csv,text/csv"
+              onChange={(event) => setFile(event.target.files?.[0] || null)}
+              className="block w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-700"
+            />
+            <button
+              type="submit"
+              disabled={!file || uploading}
+              className="rounded-2xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-60"
+            >
+              {uploading ? 'Uploading...' : 'Upload CSV'}
+            </button>
+          </form>
+
+          <form onSubmit={handleManualSubmit} className="space-y-4 rounded-3xl border border-slate-200 bg-slate-50 p-5">
+            <div>
+              <p className="font-semibold text-slate-900">Manual entry</p>
+              <p className="mt-1 text-sm text-slate-500">Capture a recent cash payment, income event, or one-off spend without preparing a CSV.</p>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <label className="space-y-2 text-sm text-slate-600">
+                <span>Date</span>
+                <input
+                  type="date"
+                  name="date"
+                  value={manualForm.date}
+                  onChange={handleManualChange}
+                  className="block w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-700"
+                />
+              </label>
+              <label className="space-y-2 text-sm text-slate-600">
+                <span>Category</span>
+                <select
+                  name="category"
+                  value={manualForm.category}
+                  onChange={handleManualChange}
+                  className="block w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-700"
+                >
+                  <option value="Food">Food</option>
+                  <option value="Shopping">Shopping</option>
+                  <option value="Travel">Travel</option>
+                  <option value="Bills">Bills</option>
+                  <option value="Income">Income</option>
+                  <option value="Uncategorized">Uncategorized</option>
+                </select>
+              </label>
+            </div>
+            <label className="block space-y-2 text-sm text-slate-600">
+              <span>Description</span>
+              <input
+                type="text"
+                name="description"
+                value={manualForm.description}
+                onChange={handleManualChange}
+                placeholder="Example: Pharmacy, Salary, Rent"
+                className="block w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-700"
+              />
+            </label>
+            <label className="block space-y-2 text-sm text-slate-600">
+              <span>Amount (Rs)</span>
+              <input
+                type="number"
+                name="amount"
+                min="0.01"
+                step="0.01"
+                value={manualForm.amount}
+                onChange={handleManualChange}
+                placeholder="0.00"
+                className="block w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-700"
+              />
+            </label>
+            <button
+              type="submit"
+              disabled={manualSaving || !manualForm.date || !manualForm.description.trim() || !manualForm.amount}
+              className="rounded-2xl bg-cyan-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-cyan-700 disabled:opacity-60"
+            >
+              {manualSaving ? 'Saving...' : 'Add Transaction'}
+            </button>
+          </form>
+        </div>
 
         {uploadState ? (
           <div className={`mt-4 rounded-2xl border p-4 text-sm ${uploadState.tone === 'success' ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-rose-200 bg-rose-50 text-rose-700'}`}>

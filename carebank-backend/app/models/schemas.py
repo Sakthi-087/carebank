@@ -17,6 +17,13 @@ class Transaction(BaseModel):
     category: str
 
 
+class ManualTransactionRequest(BaseModel):
+    date: str
+    description: str = Field(min_length=1)
+    amount: float = Field(gt=0)
+    category: str = Field(min_length=1)
+
+
 class ScoreBreakdown(BaseModel):
     savings_score: float = Field(ge=0, le=100)
     stability_score: float = Field(ge=0, le=100)
@@ -130,6 +137,11 @@ class CsvUploadResponse(BaseModel):
     inserted_count: int
     skipped_count: int
     errors: list[str]
+    fraud_summary: list[FraudFinding] = []
+
+
+class ManualTransactionResponse(BaseModel):
+    inserted_count: int
     fraud_summary: list[FraudFinding] = []
 
 

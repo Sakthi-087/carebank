@@ -91,3 +91,14 @@ export function uploadTransactionsCsv(file, accessToken) {
     body: formData,
   })
 }
+
+export function createManualTransaction(payload, accessToken) {
+  return apiRequest('/transactions/manual', {
+    method: 'POST',
+    accessToken,
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  })
+}
