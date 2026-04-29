@@ -4,9 +4,10 @@ services:
     runtime: docker
     region: oregon
     plan: free
+    rootDir: carebank-backend
     
     # Dockerfile configuration
-    dockerfilePath: ./carebank-backend/Dockerfile
+    dockerfilePath: Dockerfile
     
     # Environment variables
     envVars:
